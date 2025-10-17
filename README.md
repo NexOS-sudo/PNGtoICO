@@ -3,7 +3,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.8%2B-blue.svg)](https://www.python.org/downloads/)
 
-![IconMaster Project Logo](IconMaster-Logo.jpg?width=550)
+![IconMaster Project Logo](Project's Logo/IconMaster-Logo.jpg?width=550)
 
 **IconMaster** is a modern, standalone desktop application for converting PNG images into ICO files with a single click. Built with Python and CustomTkinter for a sleek and simple user experience.
 

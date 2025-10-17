@@ -51,7 +51,7 @@ You can either download the ready-to-use application or run the project from the
 ### For End-Users (Recommended)
 
 1.  Navigate to the [**Releases**](https://github.com/NexOS-sudo/PNGtoICO/releases) page of this repository.
-2.  Download the latest `IconMaster.exe` file.
+2.  Download the latest `Icon_Master_GUI.exe` file.
 3.  Run the file. No installation is required.
 
 ### For Developers

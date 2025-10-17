@@ -9,10 +9,6 @@ import colorsys
 
 
 class IconConverter:
-    """
-    A utility to convert an image to an ICO, with manual and automatic
-    subject-color cropping.
-    """
     TARGET_SIZES = [
         (16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)
     ]
@@ -24,15 +20,11 @@ class IconConverter:
         self.image: Optional[Image.Image] = None
 
     def _color_distance(self, c1: Tuple[int, ...], c2: Tuple[int, ...]) -> float:
-        """Calculates the Euclidean distance between two RGB colors."""
         r1, g1, b1, *_ = c1
         r2, g2, b2, *_ = c2
         return math.sqrt((r1 - r2) ** 2 + (g1 - g2) ** 2 + (b1 - b2) ** 2)
 
     def find_dominant_color(self) -> Optional[Tuple[int, int, int]]:
-        """
-        UPDATED: Analyzes the image to find the most dominant AND vibrant color.
-        """
         logging.info("🔍 Analyzing image for dominant color...")
         img = Image.open(self.input_path).convert('RGBA')
 
@@ -86,7 +78,6 @@ class IconConverter:
         return best_color
 
     def _crop_to_subject(self, img: Image.Image, subject_color: Tuple[int, int, int], tolerance: int) -> Image.Image:
-        """Crops an image by finding all pixels similar to a given subject_color."""
         if img.mode != 'RGBA':
             img = img.convert('RGBA')
 
@@ -110,7 +101,6 @@ class IconConverter:
             return img
 
     def convert(self, output_path: Optional[str], subject_color: Tuple[int, int, int], tolerance: int):
-        """Loads, crops, and converts the image to an ICO."""
         try:
             self.image = Image.open(self.input_path)
             logging.info(f"Source image loaded: {self.image.size}, Mode: {self.image.mode}")

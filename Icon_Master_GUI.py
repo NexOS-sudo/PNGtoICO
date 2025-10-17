@@ -15,7 +15,7 @@ from PIL import Image
 # Import the backend class from the separate file
 from Icon_Converter_Algorithm import IconConverter
 
-APP_VERSION = "1.1.0"
+APP_VERSION = "1.2.0"
 # This now points to the JSON file that contains links to BOTH the app and the updater
 VERSION_INFO_URL = "https://raw.githubusercontent.com/JailbreakHubOfficial/PNGtoICO/autoupdater/version.json"
 
@@ -282,3 +282,4 @@ class IconMasterApp(ctk.CTk):
 if __name__ == "__main__":
     app = IconMasterApp()
     app.mainloop()
+

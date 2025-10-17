@@ -8,12 +8,14 @@ import sys
 import subprocess
 import logging
 import requests
+import time
+import psutil
 from PIL import Image
 
 # Import the backend class from the separate file
 from Icon_Converter_Algorithm import IconConverter
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.1.0"
 # This now points to the JSON file that contains links to BOTH the app and the updater
 VERSION_INFO_URL = "https://raw.githubusercontent.com/JailbreakHubOfficial/PNGtoICO/autoupdater/version.json"
 
@@ -37,7 +39,7 @@ class IconMasterApp(ctk.CTk):
         super().__init__()
         self._cleanup_updater()  # <-- ADDED THIS LINE
 
-        self.title(f"Icon Master GUI v{APP_VERSION}")
+        self.title(f"Icon Master GUI")
         self.geometry("800x600")
         ctk.set_appearance_mode("Dark")
         ctk.set_default_color_theme("blue")
@@ -55,19 +57,32 @@ class IconMasterApp(ctk.CTk):
         self._create_widgets()
         self._setup_logging()
 
-    # --- ADDED THIS NEW METHOD ---
     def _cleanup_updater(self):
-        """On startup, checks for and deletes the updater executable."""
+        UPDATER_NAME = "autoupdater.exe"
         try:
-            # This logic finds the correct path when running as a compiled .exe
-            if getattr(sys, 'frozen', False):
-                executable_dir = os.path.dirname(sys.executable)
-                updater_path = os.path.join(executable_dir, 'autoupdater.exe')
+            # 1. Find and terminate the updater process
+            for proc in psutil.process_iter(['name']):
+                if proc.info['name'] == UPDATER_NAME:
+                    proc.kill()  # Forcefully terminate the process
+                    proc.wait(timeout=3)  # Wait for termination to complete
 
-                if os.path.exists(updater_path):
-                    os.remove(updater_path)
-        except Exception:
-            # Fail silently. It's not a critical error if the cleanup fails.
+            # 2. Delete the updater file (with the original retry logic)
+            if getattr(sys, 'frozen', False):
+                current_dir = os.path.dirname(sys.executable)
+            else:
+                current_dir = os.path.dirname(os.path.abspath(__file__))
+
+            updater_path = os.path.join(current_dir, UPDATER_NAME)
+
+            if os.path.exists(updater_path):
+                for _ in range(5):
+                    try:
+                        os.remove(updater_path)
+                        break
+                    except PermissionError:
+                        time.sleep(0.2)  # Wait a bit longer
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess, Exception):
+            # Fail silently. Cleanup is a best-effort, not critical.
             pass
 
     def _resource_path(self, relative_path):
@@ -78,9 +93,6 @@ class IconMasterApp(ctk.CTk):
         return os.path.join(base_path, relative_path)
 
     def _run_updater(self):
-        """
-        Downloads and runs the LATEST autoupdater.exe.
-        """
         logging.info("Checking for updates...")
         try:
             cert_path = self._resource_path('cacert.pem')
@@ -115,36 +127,50 @@ class IconMasterApp(ctk.CTk):
             logging.error(f"Failed to check for updates: {e}")
 
     def _create_widgets(self):
+        # --- 1. NEW: Create the top title bar frame ---
+        title_frame = ctk.CTkFrame(self, fg_color="transparent", height=40)
+        title_frame.grid(row=0, column=0, padx=10, pady=(10, 0), sticky="ew")
+        title_frame.grid_columnconfigure(0, weight=1)
+
+        # Add the application title label to the left of the title bar
+        title_label = ctk.CTkLabel(title_frame, text=f"Icon Master v{APP_VERSION}",
+                                   font=ctk.CTkFont(size=18, weight="bold"))
+        title_label.pack(side="left", padx=10)
+
+        # Create and add the update button to the right of the title bar
+        update_button = ctk.CTkButton(title_frame, text="", image=self.update_icon, command=self._run_updater,
+                                      width=32, height=32, fg_color="transparent", hover_color="#444444")
+        update_button.pack(side="right", padx=10)
+
+        # --- 2. MODIFIED: All main frames are shifted down by one row ---
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
-        main_frame.grid(row=0, column=0, padx=20, pady=20, sticky="ew")
+        main_frame.grid(row=1, column=0, padx=20, pady=10, sticky="ew")  # Changed row to 1
         main_frame.grid_columnconfigure((0, 1), weight=1)
+
+        # File Setup Frame (no changes inside this frame)
         file_frame = ctk.CTkFrame(main_frame)
         file_frame.grid(row=0, column=0, padx=(0, 10), pady=10, sticky="nsew")
         file_frame.grid_columnconfigure(0, weight=1)
         ctk.CTkLabel(file_frame, text="File Setup", font=ctk.CTkFont(size=16, weight="bold")).grid(row=0, column=0,
-                                                                                                   columnspan=2,
-                                                                                                   padx=15,
+                                                                                                   columnspan=2, padx=15,
                                                                                                    pady=(15, 10),
                                                                                                    sticky="w")
-        ctk.CTkLabel(file_frame, text="Input Image").grid(row=1, column=0, columnspan=2, padx=15, pady=(5, 0),
-                                                          sticky="w")
-        ctk.CTkEntry(file_frame, textvariable=self.input_file_path, state="readonly").grid(row=2, column=0, padx=15,
-                                                                                           pady=5, sticky="ew")
+        ctk.CTkLabel(file_frame, text="Input Image").grid(row=1, column=0, columnspan=2, padx=15, pady=(5, 0), sticky="w")
+        ctk.CTkEntry(file_frame, textvariable=self.input_file_path, state="readonly").grid(row=2, column=0, padx=15, pady=5,
+                                                                                           sticky="ew")
         ctk.CTkButton(file_frame, text="Browse", image=self.folder_icon, command=self._select_input_file).grid(row=2,
                                                                                                                column=1,
-                                                                                                               padx=(
-                                                                                                               0, 15),
+                                                                                                               padx=(0, 15),
                                                                                                                pady=5)
-        ctk.CTkLabel(file_frame, text="Output (.ico)").grid(row=3, column=0, columnspan=2, padx=15, pady=(5, 0),
-                                                            sticky="w")
+        ctk.CTkLabel(file_frame, text="Output (.ico)").grid(row=3, column=0, columnspan=2, padx=15, pady=(5, 0), sticky="w")
         ctk.CTkEntry(file_frame, textvariable=self.output_file_path).grid(row=4, column=0, padx=15, pady=(5, 20),
                                                                           sticky="ew")
         ctk.CTkButton(file_frame, text="Save As", image=self.save_icon, command=self._select_output_file).grid(row=4,
                                                                                                                column=1,
-                                                                                                               padx=(
-                                                                                                               0, 15),
-                                                                                                               pady=(
-                                                                                                               5, 20))
+                                                                                                               padx=(0, 15),
+                                                                                                               pady=(5, 20))
+
+        # Cropping Controls Frame (no changes inside this frame)
         controls_frame = ctk.CTkFrame(main_frame)
         controls_frame.grid(row=0, column=1, padx=(10, 0), pady=10, sticky="nsew")
         controls_frame.grid_columnconfigure(0, weight=1)
@@ -152,13 +178,12 @@ class IconMasterApp(ctk.CTk):
                                                                                                               column=0,
                                                                                                               columnspan=3,
                                                                                                               padx=15,
-                                                                                                              pady=(
-                                                                                                              15, 10),
+                                                                                                              pady=(15, 10),
                                                                                                               sticky="w")
         ctk.CTkLabel(controls_frame, text="Subject Color").grid(row=1, column=0, columnspan=3, padx=15, pady=(5, 0),
                                                                 sticky="w")
-        self.color_preview_label = ctk.CTkLabel(controls_frame, text="", fg_color=self.subject_color_hex.get(),
-                                                width=35, height=35, corner_radius=8)
+        self.color_preview_label = ctk.CTkLabel(controls_frame, text="", fg_color=self.subject_color_hex.get(), width=35,
+                                                height=35, corner_radius=8)
         self.color_preview_label.grid(row=2, column=0, padx=15, pady=5, sticky="w")
         color_buttons_frame = ctk.CTkFrame(controls_frame, fg_color="transparent")
         color_buttons_frame.grid(row=2, column=1, columnspan=2, padx=10, pady=5, sticky="w")
@@ -173,14 +198,18 @@ class IconMasterApp(ctk.CTk):
                                                                  sticky="ew")
         self.tolerance_label = ctk.CTkLabel(controls_frame, text=f"{self.tolerance_value.get()}", width=40)
         self.tolerance_label.grid(row=4, column=2, padx=(0, 15), pady=(5, 20))
+
+        # --- 3. MODIFIED: Other widgets are shifted down ---
         ctk.CTkButton(self, text="Create Icon", command=self._run_conversion, height=50,
-                      font=ctk.CTkFont(size=18, weight="bold")).grid(row=1, column=0, padx=20, pady=10, sticky="ew")
+                      font=ctk.CTkFont(size=18, weight="bold")).grid(row=2, column=0, padx=20, pady=10,
+                                                                     sticky="ew")  # Changed row to 2
+
         self.status_textbox = ctk.CTkTextbox(self, state="disabled", wrap="word",
                                              font=ctk.CTkFont(family="monospace", size=13))
-        self.status_textbox.grid(row=2, column=0, padx=20, pady=(0, 20), sticky="nsew")
+        self.status_textbox.grid(row=3, column=0, padx=20, pady=(0, 20), sticky="nsew")  # Changed row to 3
+
         update_button = ctk.CTkButton(self, text="", image=self.update_icon, command=self._run_updater, width=32,
                                       height=32, fg_color="transparent", hover_color="#333333")
-        update_button.place(relx=1.0, rely=1.0, x=-20, y=-20, anchor="se")
 
     def _setup_logging(self):
         logger = logging.getLogger()

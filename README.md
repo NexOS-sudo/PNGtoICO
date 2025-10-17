@@ -78,7 +78,7 @@ To run this project from the source code, you'll need Python and `pip` installed
 
 ## Usage
 
-1.  Launch the `IconMaster.exe` application.
+1.  Launch the `Icon_Master_GUI.exe` application.
 2.  Click the **"Select PNG Image"** button.
 3.  Choose your desired `.png` file from the file dialog.
 4.  The application will automatically process it and save the new `.ico` file in the **same directory** as the original image. A success message will confirm the conversion.
@@ -99,7 +99,7 @@ If you have modified the source code and wish to compile your own `.exe` file, y
     ```sh
     pyinstaller --onefile --windowed --add-data "assets;assets" --add-data "cacert.pem;." --hidden-import "PIL" --hidden-import "customtkinter" Icon_Master_GUI.py Icon_Converter_Algorithm.py
     ```
-    *The final `.exe` will be located in the `dist` folder that PyInstaller creates.*
+    *The final `.exe` will be located in the `dist` folder that PyInstaller creates. By default, it will be named `Icon_Master_GUI.exe`.*
 
 ---
 

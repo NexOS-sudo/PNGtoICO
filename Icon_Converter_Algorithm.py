@@ -5,7 +5,7 @@ import os
 import math
 from PIL import Image
 from typing import Tuple, Optional
-import colorsys  # Import the colorsys library
+import colorsys
 
 
 class IconConverter:

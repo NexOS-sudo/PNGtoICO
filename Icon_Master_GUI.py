@@ -1,4 +1,4 @@
-# Icon_Master_GUI.py (Bootstrapper Version)
+# Icon_Master_GUI.py
 
 import customtkinter as ctk
 import tkinter as tk
@@ -13,8 +13,8 @@ from PIL import Image
 # Import the backend class from the separate file
 from Icon_Converter_Algorithm import IconConverter
 
-APP_VERSION = "1.1.0"
-# This points to the JSON file that contains links to BOTH the app and the updater
+APP_VERSION = "1.2.0"
+# This now points to the JSON file that contains links to BOTH the app and the updater
 VERSION_INFO_URL = "https://raw.githubusercontent.com/JailbreakHubOfficial/PNGtoICO/autoupdater/version.json"
 
 
@@ -35,7 +35,8 @@ class TextboxHandler(logging.Handler):
 class IconMasterApp(ctk.CTk):
     def __init__(self):
         super().__init__()
-        
+        self._cleanup_updater()  # <-- ADDED THIS LINE
+
         self.title(f"Icon Master GUI v{APP_VERSION}")
         self.geometry("800x600")
         ctk.set_appearance_mode("Dark")
@@ -54,6 +55,21 @@ class IconMasterApp(ctk.CTk):
         self._create_widgets()
         self._setup_logging()
 
+    # --- ADDED THIS NEW METHOD ---
+    def _cleanup_updater(self):
+        """On startup, checks for and deletes the updater executable."""
+        try:
+            # This logic finds the correct path when running as a compiled .exe
+            if getattr(sys, 'frozen', False):
+                executable_dir = os.path.dirname(sys.executable)
+                updater_path = os.path.join(executable_dir, 'autoupdater.exe')
+
+                if os.path.exists(updater_path):
+                    os.remove(updater_path)
+        except Exception:
+            # Fail silently. It's not a critical error if the cleanup fails.
+            pass
+
     def _resource_path(self, relative_path):
         try:
             base_path = sys._MEIPASS
@@ -62,41 +78,41 @@ class IconMasterApp(ctk.CTk):
         return os.path.join(base_path, relative_path)
 
     def _run_updater(self):
-    """
-    Downloads and runs the LATEST autoupdater.exe.
-    """
-    logging.info("Checking for updates...")
-    try:
-        cert_path = self._resource_path('cacert.pem')
-        os.environ['REQUESTS_CA_BUNDLE'] = cert_path
+        """
+        Downloads and runs the LATEST autoupdater.exe.
+        """
+        logging.info("Checking for updates...")
+        try:
+            cert_path = self._resource_path('cacert.pem')
+            os.environ['REQUESTS_CA_BUNDLE'] = cert_path
 
-        response = requests.get(VERSION_INFO_URL, timeout=15)
-        data = response.json()
-        # This URL should now point to autoupdater.exe
-        autoupdater_url = data["autoupdater_url"]
+            response = requests.get(VERSION_INFO_URL, timeout=15)
+            data = response.json()
+            # This URL should now point to autoupdater.exe
+            autoupdater_url = data["autoupdater_url"]
 
-        logging.info(f"Downloading latest updater from {autoupdater_url}...")
-        updater_response = requests.get(autoupdater_url, timeout=60) # Increased timeout for .exe
-        updater_response.raise_for_status()
+            logging.info(f"Downloading latest updater from {autoupdater_url}...")
+            updater_response = requests.get(autoupdater_url, timeout=60)  # Increased timeout for .exe
+            updater_response.raise_for_status()
 
-        # FIXED: Save as autoupdater.exe in the main app directory
-        if getattr(sys, 'frozen', False):
-            executable_dir = os.path.dirname(sys.executable)
-        else:
-            executable_dir = os.path.dirname(os.path.abspath(__file__))
+            # FIXED: Save as autoupdater.exe in the main app directory
+            if getattr(sys, 'frozen', False):
+                executable_dir = os.path.dirname(sys.executable)
+            else:
+                executable_dir = os.path.dirname(os.path.abspath(__file__))
 
-        updater_path = os.path.join(executable_dir, 'autoupdater.exe')
-        with open(updater_path, 'wb') as f:
-            f.write(updater_response.content)
-        logging.info("Updater executable downloaded successfully.")
+            updater_path = os.path.join(executable_dir, 'autoupdater.exe')
+            with open(updater_path, 'wb') as f:
+                f.write(updater_response.content)
+            logging.info("Updater executable downloaded successfully.")
 
-        # FIXED: Launch the .exe directly. No need for sys.executable.
-        logging.info("Relaunching via updater...")
-        subprocess.Popen([updater_path, APP_VERSION], cwd=executable_dir)
-        self.destroy() # Close the main GUI
+            # FIXED: Launch the .exe directly. No need for sys.executable.
+            logging.info("Relaunching via updater...")
+            subprocess.Popen([updater_path, APP_VERSION], cwd=executable_dir)
+            self.destroy()  # Close the main GUI
 
-    except Exception as e:
-        logging.error(f"Failed to check for updates: {e}")
+        except Exception as e:
+            logging.error(f"Failed to check for updates: {e}")
 
     def _create_widgets(self):
         main_frame = ctk.CTkFrame(self, fg_color="transparent")
@@ -237,4 +253,3 @@ class IconMasterApp(ctk.CTk):
 if __name__ == "__main__":
     app = IconMasterApp()
     app.mainloop()
-
